@@ -222,3 +222,94 @@ export async function compressPDF(file, options = {}, onProgress) {
 
       onProgress?.(15); // Reset progress for retry
     }
+
+    onProgress?.(100);
+
+    return {
+      success: true,
+      originalSize,
+      compressedSize,
+      compressionRatio: ((originalSize - compressedSize) / originalSize * 100).toFixed(1),
+      blob: compressedBlob,
+      filename: file.name.replace('.pdf', '_compressed.pdf'),
+      pageCount: pagesToProcess.length,
+      totalPages: numPages,
+      settings: {
+        quality: currentQuality,
+        scale: currentScale,
+        grayscale: useGrayscale,
+      },
+    };
+  } catch (error) {
+    console.error('PDF compression error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to compress PDF',
+    };
+  }
+}
+
+export function formatFileSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+export function parseFileSize(str) {
+  const match = str.match(/^([\d.]+)\s*(B|KB|MB|GB)$/i);
+  if (!match) return null;
+  const num = parseFloat(match[1]);
+  const unit = match[2].toUpperCase();
+  const multipliers = { B: 1, KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
+  return Math.round(num * multipliers[unit]);
+}
+
+export function validatePDF(file) {
+  if (!file) {
+    return { valid: false, error: 'No file selected' };
+  }
+
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+    return { valid: false, error: 'Please select a PDF file' };
+  }
+
+  const maxSize = 100 * 1024 * 1024;
+  if (file.size > maxSize) {
+    return { valid: false, error: 'File is too large. Maximum size is 100MB.' };
+  }
+
+  return { valid: true };
+}
+
+// History management
+const HISTORY_KEY = 'shrink_history';
+const MAX_HISTORY = 10;
+
+export function getHistory() {
+  try {
+    const data = localStorage.getItem(HISTORY_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addToHistory(entry) {
+  try {
+    const history = getHistory();
+    history.unshift({
+      ...entry,
+      id: Date.now(),
+      date: new Date().toISOString(),
+    });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
+  } catch (e) {
+    console.error('Failed to save history:', e);
+  }
+}
+
+export function clearHistory() {
+  localStorage.removeItem(HISTORY_KEY);
+}

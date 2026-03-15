@@ -779,8 +779,11 @@ function App() {
           Your files never leave your device.
         </p>
       </div>
+      <a
+        className="fixed bottom-5 left-1/2 -translate-x-1/2 text-sm px-4 py-2"
+        >
         Coded by @jyotsna
-      
+      </a>
     </div>
   );
 }
